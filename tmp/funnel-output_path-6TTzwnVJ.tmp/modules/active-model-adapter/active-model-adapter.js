@@ -1,0 +1,1 @@
+/home/dev/Codes/ember/ember-cli-test/borrowers/tmp/funnel-input_base_path-tJnuj18V.tmp/0/active-model-adapter.js

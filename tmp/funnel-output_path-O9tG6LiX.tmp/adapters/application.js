@@ -1,0 +1,1 @@
+/home/dev/Codes/ember/ember-cli-test/borrowers/tmp/funnel-input_base_path-ZJHyKAWr.tmp/0/adapters/application.js
