@@ -1,10 +1,18 @@
 import Ember from 'ember';
 
 export default Ember.Route.extend({
+  queryParams:{
+    sortBy:{
+      refreshModel:true
+    },
+    sortAscending:{
+      refreshModel:true
+    }
+  },
 
-   model(){
-     return this.store.findAll('friend');
+   model(params){
+     return this.store.findAll('friend',params);
    },
-   
+
 
 });

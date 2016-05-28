@@ -8,7 +8,8 @@ define('borrowers/adapters/application', ['exports', 'ember-data', 'active-model
     'use strict';
 
     exports['default'] = ActiveModelAdapter['default'].extend({
-        namespace: 'api/v2'
+        namespace: 'api/v2',
+        coalesceFindRequests: true
     });
 
 });
@@ -172,6 +173,30 @@ define('borrowers/controllers/friends/edit', ['exports', 'borrowers/controllers/
   });
 
 });
+define('borrowers/controllers/friends/index', ['exports', 'ember'], function (exports, Ember) {
+
+  'use strict';
+
+  exports['default'] = Ember['default'].Controller.extend({
+    queryParams: ['sortBy', 'sortAscending'],
+    sortAscending: true,
+    //sortBy属性的值是排序的依据
+    sortBy: 'firstName',
+    actions: {
+      //setSortBy函数的参数是表示排序依据的字段名
+      //在setSortBy函数中会转换sortAscending属性的值
+      //toggleProperty方法由Observable类提供,用于把布尔值属性的值在true和false中切换
+      setSortBy: function setSortBy(fieldName) {
+        this.set('sortBy', fieldName);
+        this.toggleProperty('sortAscending');
+        console.log('Sorting by', fieldName);
+        console.log('Sorting Asc?: ', this.get('sortAscending'));
+        return false;
+      }
+    }
+  });
+
+});
 define('borrowers/controllers/friends/new', ['exports', 'borrowers/controllers/friends/base'], function (exports, FriendsBaseController) {
 
   'use strict';
@@ -301,7 +326,7 @@ define('borrowers/models/friend', ['exports', 'ember-data', 'ember'], function (
   'use strict';
 
   exports['default'] = DS['default'].Model.extend({
-    articles: DS['default'].hasMany('article'),
+    articles: DS['default'].hasMany('article', { async: true }),
     firstName: DS['default'].attr('string'),
     lastName: DS['default'].attr('string'),
     email: DS['default'].attr('string'),
@@ -355,16 +380,15 @@ define('borrowers/routes/articles/index', ['exports', 'ember'], function (export
         model.save();
         return false;
       }
-    },
-
-    resetController: function resetController(controller, isExiting) {
-      if (isExiting) {
-        var model = controller.get('model');
-        model.destroyRecord();
-      }
     }
 
   });
+  // resetController(controller,isExiting){
+  //      if(isExiting){
+  //        var model=controller.get('model');
+  //          model.destroyRecord(); }
+  //
+  // }
 
 });
 define('borrowers/routes/articles/new', ['exports', 'ember'], function (exports, Ember) {
@@ -421,9 +445,17 @@ define('borrowers/routes/friends/index', ['exports', 'ember'], function (exports
   'use strict';
 
   exports['default'] = Ember['default'].Route.extend({
+    queryParams: {
+      sortBy: {
+        refreshModel: true
+      },
+      sortAscending: {
+        refreshModel: true
+      }
+    },
 
-    model: function model() {
-      return this.store.findAll('friend');
+    model: function model(params) {
+      return this.store.findAll('friend', params);
     }
 
   });
@@ -1435,7 +1467,7 @@ define('borrowers/templates/friends/index', ['exports'], function (exports) {
         var el1 = dom.createTextNode("\n");
         dom.appendChild(el0, el1);
         var el1 = dom.createElement("table");
-        dom.setAttribute(el1,"class","primary");
+        dom.setAttribute(el1,"class","friends-table primary");
         var el2 = dom.createTextNode("\n  ");
         dom.appendChild(el1, el2);
         var el2 = dom.createElement("thead");
@@ -1451,6 +1483,8 @@ define('borrowers/templates/friends/index', ['exports'], function (exports) {
         var el4 = dom.createTextNode("\n      ");
         dom.appendChild(el3, el4);
         var el4 = dom.createElement("th");
+        var el5 = dom.createTextNode("articles");
+        dom.appendChild(el4, el5);
         dom.appendChild(el3, el4);
         var el4 = dom.createTextNode("\n    ");
         dom.appendChild(el3, el4);
@@ -1480,12 +1514,20 @@ define('borrowers/templates/friends/index', ['exports'], function (exports) {
         return el0;
       },
       buildRenderNodes: function buildRenderNodes(dom, fragment, contextualElement) {
-        var morphs = new Array(2);
-        morphs[0] = dom.createMorphAt(dom.childAt(fragment, [1, 3]),1,1);
-        morphs[1] = dom.createMorphAt(fragment,3,3,contextualElement);
+        var element2 = dom.childAt(fragment, [1]);
+        var element3 = dom.childAt(element2, [1, 1]);
+        var element4 = dom.childAt(element3, [1]);
+        var element5 = dom.childAt(element3, [3]);
+        var morphs = new Array(4);
+        morphs[0] = dom.createElementMorph(element4);
+        morphs[1] = dom.createElementMorph(element5);
+        morphs[2] = dom.createMorphAt(dom.childAt(element2, [3]),1,1);
+        morphs[3] = dom.createMorphAt(fragment,3,3,contextualElement);
         return morphs;
       },
       statements: [
+        ["element","action",["setSortBy","firstName"],[],["loc",[null,[5,10],[5,44]]]],
+        ["element","action",["setSortBy","totalArticles"],[],["loc",[null,[6,10],[6,48]]]],
         ["block","each",[["get","model",["loc",[null,[10,14],[10,19]]]]],[],0,null,["loc",[null,[10,6],[15,15]]]],
         ["content","outlet",["loc",[null,[18,0],[18,10]]]]
       ],
@@ -1887,7 +1929,7 @@ define('borrowers/tests/adapters/application.jshint', function () {
   QUnit.module('JSHint - adapters/application.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'adapters/application.js should pass jshint.\nadapters/application.js: line 1, col 8, \'DS\' is defined but never used.\n\n1 error');
+    assert.ok(false, 'adapters/application.js should pass jshint.\nadapters/application.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nadapters/application.js: line 2, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nadapters/application.js: line 4, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n3 errors');
   });
 
 });
@@ -1898,7 +1940,7 @@ define('borrowers/tests/app.jshint', function () {
   QUnit.module('JSHint - app.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'app.js should pass jshint.');
+    assert.ok(false, 'app.js should pass jshint.\napp.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\napp.js: line 2, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\napp.js: line 3, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\napp.js: line 4, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\napp.js: line 18, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n5 errors');
   });
 
 });
@@ -1909,7 +1951,7 @@ define('borrowers/tests/components/articles/article-row.jshint', function () {
   QUnit.module('JSHint - components/articles/article-row.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'components/articles/article-row.js should pass jshint.\ncomponents/articles/article-row.js: line 9, col 9, \'article\' is already defined.\n\n1 error');
+    assert.ok(false, 'components/articles/article-row.js should pass jshint.\ncomponents/articles/article-row.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncomponents/articles/article-row.js: line 2, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\ncomponents/articles/article-row.js: line 8, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\ncomponents/articles/article-row.js: line 9, col 9, \'article\' is already defined.\n\n4 errors');
   });
 
 });
@@ -1920,7 +1962,7 @@ define('borrowers/tests/controllers/articles/index.jshint', function () {
   QUnit.module('JSHint - controllers/articles/index.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'controllers/articles/index.js should pass jshint.');
+    assert.ok(false, 'controllers/articles/index.js should pass jshint.\ncontrollers/articles/index.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/articles/index.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n2 errors');
   });
 
 });
@@ -1931,7 +1973,7 @@ define('borrowers/tests/controllers/articles/new.jshint', function () {
   QUnit.module('JSHint - controllers/articles/new.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'controllers/articles/new.js should pass jshint.\ncontrollers/articles/new.js: line 7, col 28, Missing semicolon.\ncontrollers/articles/new.js: line 10, col 16, Unnecessary semicolon.\n\n2 errors');
+    assert.ok(false, 'controllers/articles/new.js should pass jshint.\ncontrollers/articles/new.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/articles/new.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/articles/new.js: line 5, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\ncontrollers/articles/new.js: line 7, col 28, Missing semicolon.\ncontrollers/articles/new.js: line 10, col 16, Unnecessary semicolon.\n\n5 errors');
   });
 
 });
@@ -1942,7 +1984,7 @@ define('borrowers/tests/controllers/friends/base.jshint', function () {
   QUnit.module('JSHint - controllers/friends/base.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'controllers/friends/base.js should pass jshint.');
+    assert.ok(false, 'controllers/friends/base.js should pass jshint.\ncontrollers/friends/base.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/base.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/base.js: line 22, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\ncontrollers/friends/base.js: line 24, col 46, \'arrow function syntax (=>)\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/base.js: line 33, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n5 errors');
   });
 
 });
@@ -1953,7 +1995,18 @@ define('borrowers/tests/controllers/friends/edit.jshint', function () {
   QUnit.module('JSHint - controllers/friends/edit.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'controllers/friends/edit.js should pass jshint.');
+    assert.ok(false, 'controllers/friends/edit.js should pass jshint.\ncontrollers/friends/edit.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/edit.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/edit.js: line 7, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n3 errors');
+  });
+
+});
+define('borrowers/tests/controllers/friends/index.jshint', function () {
+
+  'use strict';
+
+  QUnit.module('JSHint - controllers/friends/index.js');
+  QUnit.test('should pass jshint', function(assert) {
+    assert.expect(1);
+    assert.ok(false, 'controllers/friends/index.js should pass jshint.\ncontrollers/friends/index.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/index.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n2 errors');
   });
 
 });
@@ -1964,7 +2017,7 @@ define('borrowers/tests/controllers/friends/new.jshint', function () {
   QUnit.module('JSHint - controllers/friends/new.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'controllers/friends/new.js should pass jshint.');
+    assert.ok(false, 'controllers/friends/new.js should pass jshint.\ncontrollers/friends/new.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/new.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\ncontrollers/friends/new.js: line 8, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n3 errors');
   });
 
 });
@@ -1975,7 +2028,7 @@ define('borrowers/tests/helpers/formatted-date.jshint', function () {
   QUnit.module('JSHint - helpers/formatted-date.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'helpers/formatted-date.js should pass jshint.\nhelpers/formatted-date.js: line 3, col 49, Missing semicolon.\n\n1 error');
+    assert.ok(false, 'helpers/formatted-date.js should pass jshint.\nhelpers/formatted-date.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nhelpers/formatted-date.js: line 3, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nhelpers/formatted-date.js: line 3, col 49, Missing semicolon.\nhelpers/formatted-date.js: line 5, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nhelpers/formatted-date.js: line 5, col 30, \'destructuring binding\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nhelpers/formatted-date.js: line 9, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n6 errors');
   });
 
 });
@@ -2219,7 +2272,7 @@ define('borrowers/tests/models/article.jshint', function () {
   QUnit.module('JSHint - models/article.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'models/article.js should pass jshint.');
+    assert.ok(false, 'models/article.js should pass jshint.\nmodels/article.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nmodels/article.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n2 errors');
   });
 
 });
@@ -2230,7 +2283,7 @@ define('borrowers/tests/models/friend.jshint', function () {
   QUnit.module('JSHint - models/friend.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'models/friend.js should pass jshint.');
+    assert.ok(false, 'models/friend.js should pass jshint.\nmodels/friend.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nmodels/friend.js: line 2, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nmodels/friend.js: line 4, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nmodels/friend.js: line 12, col 8, Missing property name.\n\n4 errors');
   });
 
 });
@@ -2241,7 +2294,7 @@ define('borrowers/tests/router.jshint', function () {
   QUnit.module('JSHint - router.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'router.js should pass jshint.');
+    assert.ok(false, 'router.js should pass jshint.\nrouter.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nrouter.js: line 2, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nrouter.js: line 25, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n3 errors');
   });
 
 });
@@ -2252,7 +2305,7 @@ define('borrowers/tests/routes/articles/index.jshint', function () {
   QUnit.module('JSHint - routes/articles/index.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/articles/index.js should pass jshint.');
+    assert.ok(false, 'routes/articles/index.js should pass jshint.\nroutes/articles/index.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles/index.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles/index.js: line 4, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nroutes/articles/index.js: line 8, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n4 errors');
   });
 
 });
@@ -2263,7 +2316,7 @@ define('borrowers/tests/routes/articles/new.jshint', function () {
   QUnit.module('JSHint - routes/articles/new.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/articles/new.js should pass jshint.');
+    assert.ok(false, 'routes/articles/new.js should pass jshint.\nroutes/articles/new.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles/new.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles/new.js: line 4, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nroutes/articles/new.js: line 10, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nroutes/articles/new.js: line 12, col 26, \'arrow function syntax (=>)\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles/new.js: line 16, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n6 errors');
   });
 
 });
@@ -2274,7 +2327,7 @@ define('borrowers/tests/routes/articles.jshint', function () {
   QUnit.module('JSHint - routes/articles.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/articles.js should pass jshint.');
+    assert.ok(false, 'routes/articles.js should pass jshint.\nroutes/articles.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/articles.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n2 errors');
   });
 
 });
@@ -2285,7 +2338,7 @@ define('borrowers/tests/routes/friends/edit.jshint', function () {
   QUnit.module('JSHint - routes/friends/edit.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/friends/edit.js should pass jshint.');
+    assert.ok(false, 'routes/friends/edit.js should pass jshint.\nroutes/friends/edit.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/edit.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/edit.js: line 4, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n3 errors');
   });
 
 });
@@ -2296,7 +2349,7 @@ define('borrowers/tests/routes/friends/index.jshint', function () {
   QUnit.module('JSHint - routes/friends/index.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/friends/index.js should pass jshint.');
+    assert.ok(false, 'routes/friends/index.js should pass jshint.\nroutes/friends/index.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/index.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/index.js: line 13, col 4, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n3 errors');
   });
 
 });
@@ -2307,7 +2360,7 @@ define('borrowers/tests/routes/friends/new.jshint', function () {
   QUnit.module('JSHint - routes/friends/new.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/friends/new.js should pass jshint.');
+    assert.ok(false, 'routes/friends/new.js should pass jshint.\nroutes/friends/new.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/new.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/new.js: line 4, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nroutes/friends/new.js: line 7, col 3, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n4 errors');
   });
 
 });
@@ -2318,7 +2371,7 @@ define('borrowers/tests/routes/friends/show.jshint', function () {
   QUnit.module('JSHint - routes/friends/show.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/friends/show.js should pass jshint.\nroutes/friends/show.js: line 6, col 38, \'params\' is not defined.\n\n1 error');
+    assert.ok(false, 'routes/friends/show.js should pass jshint.\nroutes/friends/show.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/show.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends/show.js: line 5, col 4, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n3 errors');
   });
 
 });
@@ -2329,7 +2382,7 @@ define('borrowers/tests/routes/friends.jshint', function () {
   QUnit.module('JSHint - routes/friends.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/friends.js should pass jshint.\nroutes/friends.js: line 8, col 9, Missing semicolon.\n\n1 error');
+    assert.ok(false, 'routes/friends.js should pass jshint.\nroutes/friends.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends.js: line 3, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends.js: line 5, col 5, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\nroutes/friends.js: line 6, col 36, \'arrow function syntax (=>)\' is only available in ES6 (use \'esversion: 6\').\nroutes/friends.js: line 8, col 9, Missing semicolon.\n\n5 errors');
   });
 
 });
@@ -2340,7 +2393,7 @@ define('borrowers/tests/routes/index.jshint', function () {
   QUnit.module('JSHint - routes/index.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'routes/index.js should pass jshint.');
+    assert.ok(false, 'routes/index.js should pass jshint.\nroutes/index.js: line 1, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/index.js: line 2, col 1, \'import\' is only available in ES6 (use \'esversion: 6\').\nroutes/index.js: line 4, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\nroutes/index.js: line 6, col 1, \'concise methods\' is available in ES6 (use \'esversion: 6\') or Mozilla JS extensions (use moz).\n\n4 errors');
   });
 
 });
@@ -2494,6 +2547,33 @@ define('borrowers/tests/unit/controllers/friends/edit-test.jshint', function () 
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
     assert.ok(true, 'unit/controllers/friends/edit-test.js should pass jshint.');
+  });
+
+});
+define('borrowers/tests/unit/controllers/friends/index-test', ['ember-qunit'], function (ember_qunit) {
+
+  'use strict';
+
+  ember_qunit.moduleFor('controller:friends/index', {
+    // Specify the other units that are required for this test.
+    // needs: ['controller:foo']
+  });
+
+  // Replace this with your real tests.
+  ember_qunit.test('it exists', function (assert) {
+    var controller = this.subject();
+    assert.ok(controller);
+  });
+
+});
+define('borrowers/tests/unit/controllers/friends/index-test.jshint', function () {
+
+  'use strict';
+
+  QUnit.module('JSHint - unit/controllers/friends/index-test.js');
+  QUnit.test('should pass jshint', function(assert) {
+    assert.expect(1);
+    assert.ok(true, 'unit/controllers/friends/index-test.js should pass jshint.');
   });
 
 });
@@ -2867,7 +2947,7 @@ define('borrowers/tests/utils/date-helpers.jshint', function () {
   QUnit.module('JSHint - utils/date-helpers.js');
   QUnit.test('should pass jshint', function(assert) {
     assert.expect(1);
-    assert.ok(true, 'utils/date-helpers.js should pass jshint.');
+    assert.ok(false, 'utils/date-helpers.js should pass jshint.\nutils/date-helpers.js: line 9, col 1, \'export\' is only available in ES6 (use \'esversion: 6\').\n\n1 error');
   });
 
 });
@@ -2914,7 +2994,7 @@ catch(err) {
 if (runningTests) {
   require("borrowers/tests/test-helper");
 } else {
-  require("borrowers/app")["default"].create({"name":"borrowers","version":"0.0.0+b6a023ce"});
+  require("borrowers/app")["default"].create({"name":"borrowers","version":"0.0.0+9849d7eb"});
 }
 
 /* jshint ignore:end */
